@@ -1,0 +1,73 @@
+==36161== Memcheck, a memory error detector
+==36161== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
+==36161== Using Valgrind-3.24.0 and LibVEX; rerun with -h for copyright info
+==36161== Command: ./murin ./test.mu
+==36161== Parent PID: 28314
+==36161== 
+==36161== 
+==36161== HEAP SUMMARY:
+==36161==     in use at exit: 44 bytes in 4 blocks
+==36161==   total heap usage: 12 allocs, 8 frees, 5,983 bytes allocated
+==36161== 
+==36161== 6 bytes in 1 blocks are indirectly lost in loss record 1 of 4
+==36161==    at 0x484BDD0: realloc (vg_replace_malloc.c:1801)
+==36161==    by 0x10A5E3: rellocate (mmemory.h:12)
+==36161==    by 0x10A628: copy_string (mobject.c:17)
+==36161==    by 0x10A588: string (mcompiler.c:239)
+==36161==    by 0x10A324: parse_precedence (mcompiler.c:180)
+==36161==    by 0x10A099: expression (mcompiler.c:68)
+==36161==    by 0x10A10A: compile (mcompiler.c:127)
+==36161==    by 0x10C293: mvm_interpret_result (mvm.c:181)
+==36161==    by 0x10B310: run_file (murinc.c:53)
+==36161==    by 0x10B391: main (murinc.c:71)
+==36161== 
+==36161== 6 bytes in 1 blocks are indirectly lost in loss record 2 of 4
+==36161==    at 0x484BDD0: realloc (vg_replace_malloc.c:1801)
+==36161==    by 0x10A5E3: rellocate (mmemory.h:12)
+==36161==    by 0x10A628: copy_string (mobject.c:17)
+==36161==    by 0x10A588: string (mcompiler.c:239)
+==36161==    by 0x10A324: parse_precedence (mcompiler.c:180)
+==36161==    by 0x10A407: binary (mcompiler.c:200)
+==36161==    by 0x10A350: parse_precedence (mcompiler.c:185)
+==36161==    by 0x10A099: expression (mcompiler.c:68)
+==36161==    by 0x10A10A: compile (mcompiler.c:127)
+==36161==    by 0x10C293: mvm_interpret_result (mvm.c:181)
+==36161==    by 0x10B310: run_file (murinc.c:53)
+==36161==    by 0x10B391: main (murinc.c:71)
+==36161== 
+==36161== 22 (16 direct, 6 indirect) bytes in 1 blocks are definitely lost in loss record 3 of 4
+==36161==    at 0x484BDD0: realloc (vg_replace_malloc.c:1801)
+==36161==    by 0x10A5E3: rellocate (mmemory.h:12)
+==36161==    by 0x10A6CB: allocate_obj (mobject.c:33)
+==36161==    by 0x10A686: allocate_string (mobject.c:25)
+==36161==    by 0x10A666: copy_string (mobject.c:20)
+==36161==    by 0x10A588: string (mcompiler.c:239)
+==36161==    by 0x10A324: parse_precedence (mcompiler.c:180)
+==36161==    by 0x10A099: expression (mcompiler.c:68)
+==36161==    by 0x10A10A: compile (mcompiler.c:127)
+==36161==    by 0x10C293: mvm_interpret_result (mvm.c:181)
+==36161==    by 0x10B310: run_file (murinc.c:53)
+==36161==    by 0x10B391: main (murinc.c:71)
+==36161== 
+==36161== 22 (16 direct, 6 indirect) bytes in 1 blocks are definitely lost in loss record 4 of 4
+==36161==    at 0x484BDD0: realloc (vg_replace_malloc.c:1801)
+==36161==    by 0x10A5E3: rellocate (mmemory.h:12)
+==36161==    by 0x10A6CB: allocate_obj (mobject.c:33)
+==36161==    by 0x10A686: allocate_string (mobject.c:25)
+==36161==    by 0x10A666: copy_string (mobject.c:20)
+==36161==    by 0x10A588: string (mcompiler.c:239)
+==36161==    by 0x10A324: parse_precedence (mcompiler.c:180)
+==36161==    by 0x10A407: binary (mcompiler.c:200)
+==36161==    by 0x10A350: parse_precedence (mcompiler.c:185)
+==36161==    by 0x10A099: expression (mcompiler.c:68)
+==36161==    by 0x10A10A: compile (mcompiler.c:127)
+==36161==    by 0x10C293: mvm_interpret_result (mvm.c:181)
+==36161== 
+==36161== LEAK SUMMARY:
+==36161==    definitely lost: 32 bytes in 2 blocks
+==36161==    indirectly lost: 12 bytes in 2 blocks
+==36161==      possibly lost: 0 bytes in 0 blocks
+==36161==    still reachable: 0 bytes in 0 blocks
+==36161==         suppressed: 0 bytes in 0 blocks
+==36161== 
+==36161== ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)
