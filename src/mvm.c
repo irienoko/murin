@@ -7,12 +7,14 @@
 #include "mchunk.h"
 #include "da_array.h"
 #include "mcompiler.h"
+#include "mmemory.h"
 #include "mobject.h"
 #include "mvalue.h"
 
 # pragma mark - PROTOTYPEs - 
 static Result run(Vm*vm);
 static void error_at_runtime(Vm*vm,const char*format,...);
+static void concatenate(Vm *vm);
 
 # pragma mark - APIs - 
 void mvm_init(Vm*vm)
@@ -100,7 +102,19 @@ static Result run(Vm*vm)
                 break;
             }
 
-            case OP_ADD:        BINARY_OP(NUMBER_VAL,+); break;
+            case OP_ADD:
+            {
+                if(IS_STRING(peek(0, vm)) && IS_STRING(peek(1, vm)))
+                {
+                    concatenate(vm);
+                }else if (IS_NUMBER(peek(0, vm)) && IS_NUMBER(peek(1, vm)))
+                {
+                    double a = AS_NUMBER(vm_stack_pop(vm));
+                    double b = AS_NUMBER(vm_stack_pop(vm));
+                    vm_stack_push(NUMBER_VAL(a + b), vm);
+                }else{error_at_runtime(vm, "Operands must be two numbers or two strings.");return RESULT_RUNTIME_ERROR;}
+                break;
+            }
             case OP_SUBTRACT:   BINARY_OP(NUMBER_VAL,-); break;
             case OP_MULTIPLY:   BINARY_OP(NUMBER_VAL,*); break;
             case OP_DIVIDE:     BINARY_OP(NUMBER_VAL,/); break;
@@ -192,4 +206,18 @@ Result mvm_interpret_result(const char*source,Vm*vm)
     mchunk_free(&chunk);
 
     return result;
+}
+
+static void concatenate(Vm *vm)
+{
+    ObjString *a1 = AS_STRING(vm_stack_pop(vm));
+    ObjString *b1 = AS_STRING(vm_stack_pop(vm));
+
+    int length = a1->length + b1->length;
+    char *chars = allocate(char, length+1);
+    memcpy(chars, a1->chars, a1->length);
+    memcpy(chars + a1->length, b1->chars, b1->length);
+    chars[length] = '\0';
+    ObjString *result = take_string(chars, length);
+    vm_stack_push(OBJ_VAL(result), vm);
 }

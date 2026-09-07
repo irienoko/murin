@@ -20,6 +20,11 @@ ObjString *copy_string(const char *chars, int length)
     return allocate_string(heapchar, length);
 }
 
+ObjString *take_string(char *chars, int length)
+{
+    return allocate_string(chars, length);
+}
+
 static ObjString *allocate_string(char *chars, int length)
 {
     ObjString *string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
