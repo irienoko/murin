@@ -14,7 +14,7 @@
 # pragma mark - PROTOTYPEs - 
 static Result run(Vm*vm);
 static void error_at_runtime(Vm*vm,const char*format,...);
-static void concatenate(Vm *vm);
+static void concatenate(Value a, Value b, Vm *vm);
 
 # pragma mark - APIs - 
 void mvm_init(Vm*vm)
@@ -104,14 +104,14 @@ static Result run(Vm*vm)
 
             case OP_ADD:
             {
-                if(IS_STRING(peek(0, vm)) && IS_STRING(peek(1, vm)))
+                Value a = vm_stack_pop(vm);
+                Value b = vm_stack_pop(vm);
+                if(IS_STRING(a) && IS_STRING(b))
                 {
-                    concatenate(vm);
-                }else if (IS_NUMBER(peek(0, vm)) && IS_NUMBER(peek(1, vm)))
+                    concatenate(a,b,vm);
+                }else if (IS_NUMBER(a) && IS_NUMBER(b))
                 {
-                    double a = AS_NUMBER(vm_stack_pop(vm));
-                    double b = AS_NUMBER(vm_stack_pop(vm));
-                    vm_stack_push(NUMBER_VAL(a + b), vm);
+                    vm_stack_push(NUMBER_VAL(AS_NUMBER(a) + AS_NUMBER(b)), vm);
                 }else{error_at_runtime(vm, "Operands must be two numbers or two strings.");return RESULT_RUNTIME_ERROR;}
                 break;
             }
@@ -208,10 +208,10 @@ Result mvm_interpret_result(const char*source,Vm*vm)
     return result;
 }
 
-static void concatenate(Vm *vm)
+static void concatenate(Value a, Value b, Vm *vm)
 {
-    ObjString *a1 = AS_STRING(vm_stack_pop(vm));
-    ObjString *b1 = AS_STRING(vm_stack_pop(vm));
+    ObjString *b1 = AS_STRING(b);
+    ObjString *a1 = AS_STRING(a);
 
     int length = a1->length + b1->length;
     char *chars = allocate(char, length+1);
