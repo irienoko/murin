@@ -8,6 +8,7 @@
 #include "mobject.h"
 #include "mscanner.h"
 #include "mvalue.h"
+#include "mvm.h"
 
 
 typedef struct
@@ -42,6 +43,7 @@ typedef struct
 
 Parser  __parser;
 Chunk   *__compiling_chunk;
+Vm      *__vm;
 
 # pragma mark - PROTOTYPEs - 
 static void error_at(Token*token,const char*message);
@@ -54,6 +56,7 @@ static Rule *get_rule(Tokentype type);
 
 # pragma mark - SIMPLE FUNCTIONs -
 static Chunk    *current_chunk(){return __compiling_chunk;}
+static Vm       *current_vm(){return __vm;}
 static void     error(const char*message){error_at(&__parser.prev,message);}
 static void     error_at_current(const char*message){error_at(&__parser.cur, message);}
 
@@ -117,10 +120,11 @@ static Rule rules[] =
 };
 
 # pragma mark - APIs - 
-bool compile(const char*source,Chunk*chunk)
+bool compile(const char*source,Chunk*chunk,Vm*vm)
 {
     mscanner_init(source);
     __compiling_chunk = chunk;
+    __vm = vm;
     __parser.had_error = false;
     __parser.panic_mode = false;
     advance();
@@ -236,5 +240,5 @@ static void unary()
 }
 static void string()
 {
-    emit_constant(OBJ_VAL(copy_string(__parser.prev.start+1, __parser.prev.length-2)));
+    emit_constant(OBJ_VAL(copy_string(__parser.prev.start+1, __parser.prev.length-2,current_vm())));
 }

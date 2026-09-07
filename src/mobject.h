@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "mvalue.h"
+#include "mvm.h"
 
 #define OBJ_TYPE(value)     (AS_OBJ(value)->type) 
 #define IS_STRING(value)    isObjType(value, OBJ_STRING) 
@@ -16,6 +17,7 @@ typedef enum
 struct Obj
 {
     Objtype type;
+    struct Obj *next;
 };
 struct ObjString
 {
@@ -23,8 +25,10 @@ struct ObjString
     int length;
     char *chars;
 };
-ObjString *take_string(char *chars, int length);
-ObjString *copy_string(const char *chars, int length);
+void free_objects(Vm*vm);
+
+ObjString *take_string(char *chars, int length,Vm*vm);
+ObjString *copy_string(const char *chars, int length,Vm*vm);
 static inline bool isObjType(Value value, Objtype type){return IS_OBJ(value) && AS_OBJ(value)->type ==type;}
 
 

@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "mvm.h"
@@ -20,10 +21,12 @@ static void concatenate(Value a, Value b, Vm *vm);
 void mvm_init(Vm*vm)
 {
     da_init(&vm->stack);
+    vm->objects = NULL;
 }
 void mvm_free(Vm*vm)
 {
     da_free(&vm->stack);
+    free_objects(vm);
 }
 
 # pragma mark - Simple Functions - 
@@ -192,7 +195,7 @@ Result mvm_interpret_result(const char*source,Vm*vm)
 {
     Chunk chunk;
     mchunk_init(&chunk);
-    if(!compile(source,&chunk))
+    if(!compile(source,&chunk,vm))
     {
         mchunk_free(&chunk);
         return RESULT_COMPILE_ERROR;
@@ -210,14 +213,14 @@ Result mvm_interpret_result(const char*source,Vm*vm)
 
 static void concatenate(Value a, Value b, Vm *vm)
 {
-    ObjString *b1 = AS_STRING(b);
-    ObjString *a1 = AS_STRING(a);
+    ObjString *a1 = AS_STRING(b);
+    ObjString *b1 = AS_STRING(a);
 
     int length = a1->length + b1->length;
     char *chars = allocate(char, length+1);
     memcpy(chars, a1->chars, a1->length);
     memcpy(chars + a1->length, b1->chars, b1->length);
     chars[length] = '\0';
-    ObjString *result = take_string(chars, length);
+    ObjString *result = take_string(chars, length,vm);
     vm_stack_push(OBJ_VAL(result), vm);
 }

@@ -8,6 +8,7 @@ typedef struct
     dy_value stack;
     Chunk *chunk;
     uint8_t *ip;
+    Obj *objects;
 }Vm;
 
 typedef enum
