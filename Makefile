@@ -10,7 +10,7 @@ BUILD_DIRS	= $(BUILD_DIR) $(BUILD_DIR)/src
 ##############################
 CFLAGS	= -fno-math-errno -Werror -Wno-error=missing-braces -Wno-error=strict-aliasing
 LDFLAGS	= -g
-ENAME	= murin
+ENAME	= murin-1.0.0
 TARGET	:= $(ENAME)
 
 # Enables dependency tracking (https://make.mad-scientist.net/papers/advanced-auto-dependency-generation/)

@@ -1,3 +1,8 @@
 //THIS TO FIX AT SOME POINT
 redue the stack either make it registor based. or not but better :]
 maybe add string conversion when using + (maybe)
+
+rewrite everything one more time:
+    - change da_array.h to inline functions
+    - make hash tabel more generic
+    - figure out how to benchmark a hash tabel
