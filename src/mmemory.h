@@ -6,6 +6,9 @@
 #define allocate(type, count)\
     (type*)rellocate(NULL, 0, sizeof(type) *count)
 
+#define GROW_CAPACITY(capacity) \
+    ((capacity) < 8 ? 8 : (capacity) * 2)
+    
 #define free_array(type, pointer, oldCount) \
     rellocate(pointer, sizeof(type) * (oldCount), 0)
 #define FREE(type, pointer) rellocate(pointer, sizeof(type), 0)

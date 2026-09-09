@@ -10,6 +10,7 @@
 #include "mcompiler.h"
 #include "mmemory.h"
 #include "mobject.h"
+#include "mtabel.h"
 #include "mvalue.h"
 
 # pragma mark - PROTOTYPEs - 
@@ -21,10 +22,12 @@ static void concatenate(Value a, Value b, Vm *vm);
 void mvm_init(Vm*vm)
 {
     da_init(&vm->stack);
+    mtabel_init(&vm->strings);
     vm->objects = NULL;
 }
 void mvm_free(Vm*vm)
 {
+    mtabel_free(&vm->strings);
     da_free(&vm->stack);
     free_objects(vm);
 }
@@ -51,12 +54,7 @@ static bool value_equal(Value a, Value b)
         case VAL_BOOL:      return AS_BOOL(a) == AS_BOOL(b);
         case VAL_NIL:       return true;
         case VAL_NUMBER:    return AS_NUMBER(a)==AS_NUMBER(b);
-        case VAL_OBJ:
-        {
-            ObjString *astring = AS_STRING(a);
-            ObjString *bstring = AS_STRING(b);
-            return astring->length == bstring->length && memcmp(astring->chars, bstring->chars, astring->length)==0;
-        }
+        case VAL_OBJ:       return AS_OBJ(a) == AS_OBJ(b);
         default:            return false;
     }
 }

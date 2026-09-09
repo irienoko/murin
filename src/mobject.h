@@ -2,6 +2,7 @@
 #define mobject_h
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "mvalue.h"
 #include "mvm.h"
 
@@ -24,6 +25,7 @@ struct ObjString
     Obj obj;
     int length;
     char *chars;
+    uint32_t hash;
 };
 void free_objects(Vm*vm);
 

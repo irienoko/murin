@@ -1,2 +1,3 @@
 //THIS TO FIX AT SOME POINT
 redue the stack either make it registor based. or not but better :]
+maybe add string conversion when using + (maybe)

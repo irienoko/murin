@@ -2,12 +2,14 @@
 #define mvm_h
 
 #include "mchunk.h"
+#include "mtabel.h"
 
 typedef struct
 {
     dy_value stack;
     Chunk *chunk;
     uint8_t *ip;
+    Tabel strings;
     Obj *objects;
 }Vm;
 
