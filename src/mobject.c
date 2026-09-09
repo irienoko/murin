@@ -30,10 +30,10 @@ void free_objects(Vm*vm)
 
 ObjString *copy_string(const char *chars, int length,Vm*vm)
 {
-    char *heapchar = allocate(char, length+1);
     uint32_t hash = hash_string(chars, length);
     ObjString *interned = mtabel_findString(&vm->strings,chars,length,hash);
     if(interned !=NULL)return interned;
+    char *heapchar = allocate(char, length+1);
     memcpy(heapchar, chars, length);
     heapchar[length] ='\0';
     return allocate_string(heapchar,length,hash,vm);
