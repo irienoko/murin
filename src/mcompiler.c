@@ -49,10 +49,14 @@ Vm      *__vm;
 static void error_at(Token*token,const char*message);
 static void advance();
 static void consume(Tokentype type, const char*message);
-static void compiler_end();
 static void emit_constant(Value value);
 static void parse_precedence(Precedence prece);
 static Rule *get_rule(Tokentype type);
+static bool check(Tokentype type);
+static bool match(Tokentype type);
+static void declaration();
+static void statement();
+
 
 # pragma mark - SIMPLE FUNCTIONs -
 static Chunk    *current_chunk(){return __compiling_chunk;}
@@ -73,6 +77,9 @@ static void grouping(){expression(); consume(TOKEN_RIGHT_PAREN,"Expect ')' after
 static void unary();
 static void literal();
 static void string();
+
+# pragma  mark - STATEMENTs -
+static void print_statement();
 
 # pragma mark - MASSIVE PARSR RULES LIST -
 static Rule rules[] = 
@@ -128,7 +135,7 @@ bool compile(const char*source,Chunk*chunk,Vm*vm)
     __parser.had_error = false;
     __parser.panic_mode = false;
     advance();
-    expression();
+    while(!match(TOKEN_EOF)) declaration();
     consume(TOKEN_EOF, "Expect end of expression.");
     compiler_end();
     return !__parser.had_error;
@@ -193,10 +200,31 @@ static Rule *get_rule(Tokentype type)
 {
     return &rules[type];
 }
+
+static bool check(Tokentype type)
+{
+    return __parser.cur.type == type;
+}
+static bool match(Tokentype type)
+{
+    if(!check(type)) return false;
+    advance();
+    return true;
+}
+static void declaration()
+{
+    statement();
+}
+static void statement()
+{
+    if(match(TOKEN_PRINT))print_statement();
+}
 static void emit_constant(Value value)
 {
     mchunk_write_constant(current_chunk(), value, __parser.prev.line);
 }
+
+# pragma mark - PARSER FUNCTION RULES IMPLEMENTATIONS-
 static void binary()
 {
     Tokentype operator_type = __parser.prev.type;
@@ -241,4 +269,12 @@ static void unary()
 static void string()
 {
     emit_constant(OBJ_VAL(copy_string(__parser.prev.start+1, __parser.prev.length-2,current_vm())));
+}
+
+# pragma  mark - STATEMENT IMPLEMENTATIONs-
+static void print_statement()
+{
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' for end line.");
+    emit_byte(OP_PRINT);
 }

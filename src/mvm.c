@@ -103,6 +103,13 @@ static Result run(Vm*vm)
                 break;
             }
 
+            case OP_PRINT:
+            {
+                mvalue_print(vm_stack_pop(vm));
+                printf("\n");
+                break;
+            }
+
             case OP_ADD:
             {
                 Value a = vm_stack_pop(vm);
@@ -163,9 +170,6 @@ static Result run(Vm*vm)
             }*/
             case OP_RETURN:
             {
-                printf("op_code:%d\n", inst);
-                mvalue_print(vm_stack_pop(vm));
-                printf("\n");
                 return RESULT_OK;
             }
         }

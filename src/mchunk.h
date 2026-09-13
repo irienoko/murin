@@ -23,7 +23,8 @@ enum opcode
     OP_DIVIDE,
     OP_CONSTANT,
     OP_CONSTANT_16,
-    OP_CONSTANT_32
+    OP_CONSTANT_32,
+    OP_PRINT
 };
 typedef struct 
 {
