@@ -56,6 +56,9 @@ static bool check(Tokentype type);
 static bool match(Tokentype type);
 static void declaration();
 static void statement();
+static void sync();
+static uint8_t parse_variable(const char *message);
+static uint8_t identifier_constant(Token *name);
 
 
 # pragma mark - SIMPLE FUNCTIONs -
@@ -68,6 +71,7 @@ static void emit_byte(uint8_t byte){mchunk_write(current_chunk(), byte, __parser
 static void emit_bytes(uint8_t byte1,uint8_t byte2){emit_byte(byte1);emit_byte(byte2);}
 static void emit_return(){emit_byte(OP_RETURN);}
 static void compiler_end(){emit_return(); if(__parser.had_error){mchunk_disassemble(current_chunk(), "==code==");}}
+static void define_variable(uint8_t global){emit_bytes(OP_DEFINE_GLOBAL, global);}
 
 # pragma mark - PARSER FUNCTION RULES -
 static void number(){double value = strtod(__parser.prev.start, NULL); emit_constant(NUMBER_VAL(value));}
@@ -77,9 +81,14 @@ static void grouping(){expression(); consume(TOKEN_RIGHT_PAREN,"Expect ')' after
 static void unary();
 static void literal();
 static void string();
+static void variable();
 
 # pragma  mark - STATEMENTs -
 static void print_statement();
+static void expression_statement();
+
+# pragma mark - DECLARATIONs -
+static void var_declaration();
 
 # pragma mark - MASSIVE PARSR RULES LIST -
 static Rule rules[] = 
@@ -103,7 +112,7 @@ static Rule rules[] =
   [TOKEN_GREATER_EQUAL] = {NULL,     binary,   PREC_COMPARISON},
   [TOKEN_LESS]          = {NULL,     binary,   PREC_COMPARISON},
   [TOKEN_LESS_EQUAL]    = {NULL,     binary,   PREC_COMPARISON},
-  [TOKEN_IDENTIFIER]    = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_IDENTIFIER]    = {variable,     NULL,   PREC_NONE},
   [TOKEN_STRING]        = {string,     NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
   [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
@@ -213,12 +222,57 @@ static bool match(Tokentype type)
 }
 static void declaration()
 {
-    statement();
+    if(match(TOKEN_VAR))
+    {
+        var_declaration();
+    }else
+    {
+        statement();
+    }
+    if(__parser.panic_mode) sync();
 }
 static void statement()
 {
-    if(match(TOKEN_PRINT))print_statement();
+    if(match(TOKEN_PRINT))
+    {
+        print_statement();
+    }else
+    {
+        expression_statement();
+    }
 }
+static void sync()
+{
+    __parser.panic_mode = false;
+    while(__parser.cur.type != TOKEN_EOF)
+    {
+        if(__parser.prev.type == TOKEN_SEMICOLON) return;
+        switch (__parser.cur.type) 
+        {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+            default:;
+        }
+        advance();
+    }
+}
+static uint8_t parse_variable(const char *message)
+{
+    consume(TOKEN_IDENTIFIER, message);
+    return identifier_constant(&__parser.prev);
+}
+static uint8_t identifier_constant(Token *name)
+{
+    return (mchunk_write_constant_return_index(current_chunk(), OBJ_VAL(copy_string(name->start, name->length, current_vm())),__parser.prev.line));
+}
+
 static void emit_constant(Value value)
 {
     mchunk_write_constant(current_chunk(), value, __parser.prev.line);
@@ -270,6 +324,15 @@ static void string()
 {
     emit_constant(OBJ_VAL(copy_string(__parser.prev.start+1, __parser.prev.length-2,current_vm())));
 }
+static void name_variable(Token name)
+{
+    uint8_t arg = identifier_constant(&name);
+    emit_bytes(OP_GET_GLOBAL, arg);
+}
+static void variable()
+{
+    name_variable(__parser.prev);
+}
 
 # pragma  mark - STATEMENT IMPLEMENTATIONs-
 static void print_statement()
@@ -277,4 +340,26 @@ static void print_statement()
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' for end line.");
     emit_byte(OP_PRINT);
+}
+
+static void expression_statement()
+{
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' for end line.");
+    emit_byte(OP_POP);
+}
+
+# pragma  mark - DECLARATION IMPLEMENTATIONs-
+static void var_declaration()
+{
+    uint8_t global = parse_variable("Expect variable name");
+    if(match(TOKEN_EQUAL))
+    {
+        expression();
+    }else
+    {
+        emit_byte(OP_NIL);
+    }
+    consume(TOKEN_SEMICOLON, "Expect ';' for end line.");
+    define_variable(global);
 }

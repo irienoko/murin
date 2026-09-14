@@ -9,6 +9,7 @@ typedef struct
     dy_value stack;
     Chunk *chunk;
     uint8_t *ip;
+    Tabel globals;
     Tabel strings;
     Obj *objects;
 }Vm;

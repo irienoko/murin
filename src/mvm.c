@@ -13,6 +13,7 @@
 #include "mtabel.h"
 #include "mvalue.h"
 
+
 # pragma mark - PROTOTYPEs - 
 static Result run(Vm*vm);
 static void error_at_runtime(Vm*vm,const char*format,...);
@@ -28,6 +29,7 @@ void mvm_init(Vm*vm)
 void mvm_free(Vm*vm)
 {
     mtabel_free(&vm->strings);
+    mtabel_free(&vm->globals);
     da_free(&vm->stack);
     free_objects(vm);
 }
@@ -63,6 +65,7 @@ static bool value_equal(Value a, Value b)
 static Result run(Vm*vm)
 {
     #define READ_BYTE() (*vm->ip++)
+    #define READ_STRING()  AS_STRING(READ_CONSTANT(READ_BYTE()))
     #define BINARY_OP(valuetype,op)\
         do{\
             Value outb = vm_stack_pop(vm);\
@@ -107,6 +110,32 @@ static Result run(Vm*vm)
             {
                 mvalue_print(vm_stack_pop(vm));
                 printf("\n");
+                break;
+            }
+
+            case OP_POP:
+            {
+                vm_stack_pop(vm);
+            }
+
+            case OP_DEFINE_GLOBAL:
+            {
+                ObjString *name = READ_STRING();
+                Value out = vm_stack_pop(vm);
+                mtabel_add(&vm->globals, name, out);
+                break;
+            }
+
+            case OP_GET_GLOBAL:
+            {
+                ObjString *name = READ_STRING();
+                Value value;
+                if(!mtabel_get(&vm->globals, name, &value))
+                {
+                    error_at_runtime(vm, "variable not defined '%s'.", name->chars);
+                    return RESULT_RUNTIME_ERROR;
+                }
+                vm_stack_push(value, vm);
                 break;
             }
 
@@ -176,6 +205,7 @@ static Result run(Vm*vm)
     }
     #undef READ_BYTE
     #undef BINARY_OP
+    #undef READ_STRING
     #undef READ_CONSTANT
 }
 static void error_at_runtime(Vm*vm,const char*format,...)

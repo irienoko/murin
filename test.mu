@@ -1,3 +1,3 @@
-print 1 + 1;
-print 2 + 1;
-print 5+4 * false;
+var hello = "hello i am string";
+var world = "this guys and idiot " + hello;
+print world;

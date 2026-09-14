@@ -24,7 +24,10 @@ enum opcode
     OP_CONSTANT,
     OP_CONSTANT_16,
     OP_CONSTANT_32,
-    OP_PRINT
+    OP_PRINT,
+    OP_POP,
+    OP_GET_GLOBAL,
+    OP_DEFINE_GLOBAL
 };
 typedef struct 
 {
@@ -62,6 +65,13 @@ void mchunk_write(Chunk *chunk, uint8_t byte, int line);
 /// @param[in] value    -> value to write to chunk
 /// @param[in] line     -> line numb
 void mchunk_write_constant(Chunk *chunk, Value value, int line);
+
+/// Write `value` to `chunk` at `line` return index
+///
+/// @param[in] chunk    -> pointer to chunk struct
+/// @param[in] value    -> value to write to chunk
+/// @param[in] line     -> line numb
+uint8_t mchunk_write_constant_return_index(Chunk *chunk, Value value, int line);
 
 /// diassemble `chunk`
 ///
