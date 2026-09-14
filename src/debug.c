@@ -1,6 +1,8 @@
 #include "debug.h"
+#include "mchunk.h"
 #include "mvalue.h"
 #include <stdint.h>
+#include <stdio.h>
 
 static int const_instruction(const char*name,Chunk*chunk,int offset);
 static int const_16instruction(const char*name,Chunk*chunk,int offset);
@@ -38,6 +40,18 @@ int disassemble_instructions(Chunk*chunk,int offset)
         case OP_NOT:
             printf("OP_NOT\n");
             return offset+1;
+        case OP_PRINT:
+            printf("OP_PRINT\n");
+            return offset +1;
+        case OP_POP:
+            printf("OP_POP\n");
+            return offset +1;
+        case OP_DEFINE_GLOBAL:
+            printf("OP_DEFINE_GLOBAL\n");
+            return offset +1;
+        case OP_GET_GLOBAL:
+            printf("OP_GET_GLOBAL\n");
+            return  offset +1;
         case OP_GREATER:
             printf("OP_GREATER\n");
             return offset+1;
