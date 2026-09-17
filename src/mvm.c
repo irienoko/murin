@@ -111,7 +111,6 @@ static Result run(Vm*vm)
         {
             case OP_CONSTANT:
             {
-                printf("op_code:%d\n", inst);
                 Value constant = READ_CONSTANT(READ_BYTE());
                 vm_stack_push(constant,vm);
                 break;
@@ -120,20 +119,20 @@ static Result run(Vm*vm)
             case OP_PRINT:
             {
                 mvalue_print(vm_stack_pop(vm));
-                printf("\n");
                 break;
             }
 
             case OP_POP:
             {
                 vm_stack_pop(vm);
+                break;
             }
 
             case OP_DEFINE_GLOBAL:
             {
                 ObjString *name = READ_STRING();
-                Value out = vm_stack_pop(vm);
-                mtabel_add(&vm->globals, name, out);
+                mtabel_add(&vm->globals, name, peek(0, vm));
+                vm_stack_pop(vm);
                 break;
             }
 
@@ -147,6 +146,18 @@ static Result run(Vm*vm)
                     return RESULT_RUNTIME_ERROR;
                 }
                 vm_stack_push(value, vm);
+                break;
+            }
+
+            case OP_SET_GLOBAL:
+            {
+                ObjString *name = READ_STRING();
+                if(mtabel_add(&vm->globals, name, peek(0, vm)))
+                {
+                    mtabel_delete(&vm->globals, name);
+                    error_at_runtime(vm, "Undefined variable '%s'.",name->chars);
+                    return RESULT_RUNTIME_ERROR;
+                }
                 break;
             }
 

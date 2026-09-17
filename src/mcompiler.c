@@ -33,7 +33,7 @@ typedef enum
   PREC_PRIMARY
 }Precedence;
 
-typedef void(*ParseFn)();
+typedef void(*ParseFn)(bool canAssign);
 typedef struct
 {
     ParseFn prefix;
@@ -74,14 +74,14 @@ static void compiler_end(){emit_return(); if(__parser.had_error){mchunk_disassem
 static void define_variable(uint8_t global){emit_bytes(OP_DEFINE_GLOBAL, global);}
 
 # pragma mark - PARSER FUNCTION RULES -
-static void number(){double value = strtod(__parser.prev.start, NULL); emit_constant(NUMBER_VAL(value));}
-static void binary();
+static void number(bool canAssign){double value = strtod(__parser.prev.start, NULL); emit_constant(NUMBER_VAL(value));}
+static void binary(bool canAssign);
 static void expression(){parse_precedence(PREC_ASSIGNMENT);}
-static void grouping(){expression(); consume(TOKEN_RIGHT_PAREN,"Expect ')' after expression");}
-static void unary();
-static void literal();
-static void string();
-static void variable();
+static void grouping(bool canAssign){expression(); consume(TOKEN_RIGHT_PAREN,"Expect ')' after expression");}
+static void unary(bool canAssign);
+static void literal(bool canAssign);
+static void string(bool canAssign);
+static void variable(bool canAssign);
 
 # pragma  mark - STATEMENTs -
 static void print_statement();
@@ -197,12 +197,17 @@ static void parse_precedence(Precedence prece)
         error("Expect expression. ");
         return;
     }
-    rule();
+    bool canAssign = prece <= PREC_ASSIGNMENT;
+    rule(canAssign);
     while (prece <= get_rule(__parser.cur.type)->prece) 
     {
         advance();
         ParseFn infix_rule = get_rule(__parser.prev.type)->infix;
-        infix_rule();
+        infix_rule(canAssign);
+    }
+    if(canAssign && match(TOKEN_EQUAL))
+    {
+        error("Invalid assigment target");
     }
 }
 static Rule *get_rule(Tokentype type)
@@ -270,7 +275,7 @@ static uint8_t parse_variable(const char *message)
 }
 static uint8_t identifier_constant(Token *name)
 {
-    return (mchunk_write_constant_return_index(current_chunk(), OBJ_VAL(copy_string(name->start, name->length, current_vm())),__parser.cur.line));
+    return (mchunk_write_constant_return_index(current_chunk(), OBJ_VAL(copy_string(name->start, name->length, current_vm())),__parser.prev.line));
 }
 
 static void emit_constant(Value value)
@@ -279,7 +284,7 @@ static void emit_constant(Value value)
 }
 
 # pragma mark - PARSER FUNCTION RULES IMPLEMENTATIONS-
-static void binary()
+static void binary(bool canAssign)
 {
     Tokentype operator_type = __parser.prev.type;
     Rule *rule = get_rule(operator_type);
@@ -299,7 +304,7 @@ static void binary()
         default: return;
     }
 }
-static void literal()
+static void literal(bool canAssign)
 {
     switch (__parser.prev.type) 
     {
@@ -309,7 +314,7 @@ static void literal()
         default: return;
     }
 }
-static void unary()
+static void unary(bool canAssign)
 {
     Tokentype operatorType = __parser.prev.type;
     parse_precedence(PREC_UNARY);
@@ -320,18 +325,22 @@ static void unary()
         default: return; // Unreachable
     }
 }
-static void string()
+static void string(bool canAssign)
 {
     emit_constant(OBJ_VAL(copy_string(__parser.prev.start+1, __parser.prev.length-2,current_vm())));
 }
-static void name_variable(Token name)
+static void name_variable(Token name,bool canAssign)
 {
     uint8_t arg = identifier_constant(&name);
-    emit_bytes(OP_GET_GLOBAL, arg);
+    if(canAssign && match(TOKEN_EQUAL))
+    {
+        expression();
+        emit_bytes(OP_SET_GLOBAL, arg);
+    }else{emit_bytes(OP_GET_GLOBAL, arg);}
 }
-static void variable()
+static void variable(bool canAssign)
 {
-    name_variable(__parser.prev);
+    name_variable(__parser.prev, canAssign);
 }
 
 # pragma  mark - STATEMENT IMPLEMENTATIONs-

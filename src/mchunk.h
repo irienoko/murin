@@ -27,6 +27,7 @@ enum opcode
     OP_PRINT,
     OP_POP,
     OP_GET_GLOBAL,
+    OP_SET_GLOBAL,
     OP_DEFINE_GLOBAL
 };
 typedef struct 

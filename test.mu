@@ -1,4 +1,3 @@
-var a = 1;
-var b = 2;
-var val = (1 < 2);
-print val;
+var beverage = "cafe au lait";
+var breakfast = "beignets with " + beverage;
+print breakfast;
