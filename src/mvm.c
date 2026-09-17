@@ -17,12 +17,15 @@
 # pragma mark - PROTOTYPEs - 
 static Result run(Vm*vm);
 static void error_at_runtime(Vm*vm,const char*format,...);
-static void concatenate(Value a, Value b, Vm *vm);
+static void concatenate(Vm *vm);
 
 # pragma mark - APIs - 
 void mvm_init(Vm*vm)
 {
     da_init(&vm->stack);
+    vm->stack.items = calloc(256, sizeof(Value));
+    vm->stack_top = vm->stack.items;
+    vm->stack.capacity = 256;
     mtabel_init(&vm->strings);
     vm->objects = NULL;
 }
@@ -35,17 +38,27 @@ void mvm_free(Vm*vm)
 }
 
 # pragma mark - Simple Functions - 
-static void  vm_stack_push(Value v,Vm*vm){da_push(&vm->stack, v);}
+static void  vm_stack_push(Value value,Vm*vm)
+{
+    if(vm->stack.count >= vm->stack.capacity)
+    {
+        vm->stack.capacity = vm->stack.capacity<256 ? vm->stack.capacity * 2: 256;
+        void *tmp = realloc((vm)->stack.items,(vm)->stack.capacity * sizeof(*(vm)->stack.items));
+        if(!tmp){fprintf(stderr, "Segment fault\n"); exit(EXIT_FAILURE);}
+        vm->stack.items = tmp;
+    }
+    *vm->stack_top = value;
+    vm->stack_top++;
+    vm->stack.count++;
+}
 static Value vm_stack_pop(Vm*vm)
 {
-    Value out;
-    da_pop(&vm->stack, &out);
-    return out;
+    vm->stack_top--;
+    return *vm->stack_top;
 }
 static Value peek(int dist, Vm*vm)
 {
-
-    return da_get_element(&vm->stack, 1-dist);
+    return vm->stack_top[-1-dist];
 }
 static bool is_falsey(Value value){return IS_NIL(value) || (IS_BOOL(value)&&!AS_BOOL(value));}
 static bool value_equal(Value a, Value b)
@@ -68,15 +81,13 @@ static Result run(Vm*vm)
     #define READ_STRING()  AS_STRING(READ_CONSTANT(READ_BYTE()))
     #define BINARY_OP(valuetype,op)\
         do{\
-            Value outb = vm_stack_pop(vm);\
-            Value outa = vm_stack_pop(vm);\
-            if(!IS_NUMBER(outa) || !IS_NUMBER(outb))\
+            if(!IS_NUMBER(peek(0,vm)) || !IS_NUMBER(peek(1,vm)))\
             {\
                 error_at_runtime(vm,"Operands must be number.");\
                 return RESULT_RUNTIME_ERROR;\
             }\
-            double b = AS_NUMBER(outb);\
-            double a = AS_NUMBER(outa);\
+            double b = AS_NUMBER(vm_stack_pop(vm));\
+            double a = AS_NUMBER(vm_stack_pop(vm));\
             vm_stack_push(valuetype(a op b),vm);\
         }while(false)
     //#define READ_CONSTANT_16() (vm->c->code[READ_BYTE()] | vm->c->code[READ_BYTE()+1] <<8)
@@ -141,14 +152,14 @@ static Result run(Vm*vm)
 
             case OP_ADD:
             {
-                Value a = vm_stack_pop(vm);
-                Value b = vm_stack_pop(vm);
-                if(IS_STRING(a) && IS_STRING(b))
+                if(IS_STRING(peek(0, vm)) && IS_STRING(peek(1, vm)))
                 {
-                    concatenate(a,b,vm);
-                }else if (IS_NUMBER(a) && IS_NUMBER(b))
+                    concatenate(vm);
+                }else if (IS_NUMBER(peek(0, vm)) && IS_NUMBER(peek(1, vm)))
                 {
-                    vm_stack_push(NUMBER_VAL(AS_NUMBER(a) + AS_NUMBER(b)), vm);
+                    double a = AS_NUMBER(vm_stack_pop(vm));
+                    double b = AS_NUMBER(vm_stack_pop(vm));
+                    vm_stack_push(NUMBER_VAL(a + b), vm);
                 }else{error_at_runtime(vm, "Operands must be two numbers or two strings.");return RESULT_RUNTIME_ERROR;}
                 break;
             }
@@ -216,7 +227,7 @@ static void error_at_runtime(Vm*vm,const char*format,...)
     va_end(args);
     fputs("\n", stderr);
 
-    size_t inst = vm->ip - vm->chunk->code.items - 1;
+    size_t inst = vm->ip - vm->chunk->code.items-1;
     printf("%04d\n",(int)inst);
     int line = mchunk_get_line(vm->chunk, inst);
     fprintf(stderr, "[line %d] in script\n",line);
@@ -243,15 +254,15 @@ Result mvm_interpret_result(const char*source,Vm*vm)
     return result;
 }
 
-static void concatenate(Value a, Value b, Vm *vm)
+static void concatenate(Vm *vm)
 {
-    ObjString *a1 = AS_STRING(b);
-    ObjString *b1 = AS_STRING(a);
+    ObjString *b = AS_STRING(vm_stack_pop(vm));
+    ObjString *a = AS_STRING(vm_stack_pop(vm));
 
-    int length = a1->length + b1->length;
+    int length = a->length + b->length;
     char *chars = allocate(char, length+1);
-    memcpy(chars, a1->chars, a1->length);
-    memcpy(chars + a1->length, b1->chars, b1->length);
+    memcpy(chars, a->chars, a->length);
+    memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
     ObjString *result = take_string(chars, length,vm);
     vm_stack_push(OBJ_VAL(result), vm);

@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+
 #define dynamic_array(type)struct\
 {\
     type *items;\
@@ -23,16 +24,6 @@ do{\
     (array)->items[(array)->count++] =(__VA_ARGS__); \
 }while (0)
 
-#define da_push_noinc(array, ...)\
-do{\
-    if((array)->count >= (array)->capacity)\
-    {\
-        (array)->capacity = (array)->capacity ? (array)->capacity *2 : 8;\
-        void *tmp = realloc((array)->items,(array)->capacity * sizeof(*(array)->items));\
-        if(!tmp){fprintf(stderr, "Out of memory\n"); exit(EXIT_FAILURE);}\
-        (array)->items = tmp;\
-    }\
-}while (0)
 
 #define da_get_element(array, index) ((array)->items[(index)])
 

@@ -4,10 +4,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#pragma mark - PROTOTYPEs -
 static int const_instruction(const char*name,Chunk*chunk,int offset);
 static int const_16instruction(const char*name,Chunk*chunk,int offset);
 static int const_32instruction(const char*name,Chunk*chunk,int offset);
-
+static int simple_instruction(const char *message, int offset);
 
 int disassemble_instructions(Chunk*chunk,int offset)
 {
@@ -20,56 +21,39 @@ int disassemble_instructions(Chunk*chunk,int offset)
         case OP_CONSTANT:
             return const_instruction("OP_CONSTANT",chunk,offset);
         case OP_RETURN:
-            printf("OP_RETURN\n");
-            return + + 1;
+            simple_instruction("OP_RETURN", offset);
         case OP_NEGATE:
-            printf("OP_NEGATE\n");
-            return  offset +1;
+            simple_instruction("OP_NEGATE", offset);
         case OP_NIL:
-            printf("OP_NIL\n");
-            return offset + 1;
+            simple_instruction("OP_NIL", offset);
         case OP_FALSE:
-            printf("OP_FALSE\n");
-            return offset + 1;
+            simple_instruction("OP_FALSE", offset);
         case OP_TRUE:
-            printf("OP_TRUE\n");
-            return offset + 1;
+            simple_instruction("OP_TRUE", offset);
         case OP_ADD:
-            printf("OP_ADD\n");
-            return  offset +1;
+            simple_instruction("OP_ADD", offset);
         case OP_NOT:
-            printf("OP_NOT\n");
-            return offset+1;
+            simple_instruction("OP_NOT", offset);
         case OP_PRINT:
-            printf("OP_PRINT\n");
-            return offset +1;
+            simple_instruction("OP_PRINT", offset);
         case OP_POP:
-            printf("OP_POP\n");
-            return offset +1;
+            simple_instruction("OP_POP", offset);
         case OP_DEFINE_GLOBAL:
-            printf("OP_DEFINE_GLOBAL\n");
-            return offset +1;
+            simple_instruction("OP_DEFINE_GLOBAL", offset);
         case OP_GET_GLOBAL:
-            printf("OP_GET_GLOBAL\n");
-            return  offset +1;
+            simple_instruction("OP_GET_GLOBAL", offset);
         case OP_GREATER:
-            printf("OP_GREATER\n");
-            return offset+1;
+            simple_instruction("OP_GREATER", offset);
         case OP_LESS:
-            printf("OP_LESS\n");
-            return offset+1;
+            simple_instruction("OP_GREATER", offset);
         case OP_EQUAL:
-            printf("OP_EQUAL\n");
-            return offset+1;
+            simple_instruction("OP_EQUAL", offset);
         case OP_SUBTRACT:
-            printf("OP_SUBTRACT\n");
-            return  offset +1;
+            simple_instruction("OP_SUBTRACT", offset);
         case OP_DIVIDE:
-            printf("OP_DIVIDE\n");
-            return  offset +1;
+            simple_instruction("OP_DIVIDE", offset);
         case OP_MULTIPLY:
-            printf("OP_MULTIPLY\n");
-            return  offset +1;
+            simple_instruction("OP_MULTIPLY", offset);
         case OP_CONSTANT_16:
             return const_16instruction("OP_CONSTANT_16",chunk,offset);
         case OP_CONSTANT_32:
@@ -80,6 +64,7 @@ int disassemble_instructions(Chunk*chunk,int offset)
     }
 }
 
+#pragma mark - PROTOTYPE IMPLEMENTATIONs-
 static int const_instruction(const char*name,Chunk*chunk,int offset)
 {
     uint8_t constant = chunk->code.items[offset+1];
@@ -106,5 +91,11 @@ static int const_32instruction(const char*name,Chunk*chunk,int offset)
     mvalue_print(chunk->value.items[constant]);
     printf("\n");
     return offset +4;
+}
+
+static int simple_instruction(const char *message, int offset)
+{
+    printf("%s\n", message);
+    return offset+1;
 }
 

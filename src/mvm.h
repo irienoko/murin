@@ -6,9 +6,10 @@
 
 typedef struct
 {
-    dy_value stack;
     Chunk *chunk;
     uint8_t *ip;
+    dy_value stack;
+    Value *stack_top;
     Tabel globals;
     Tabel strings;
     Obj *objects;

@@ -1,3 +1,4 @@
-var hello = "hello i am string";
-var world = "this guys and idiot " + hello;
-print world;
+var a = 1;
+var b = 2;
+var val = (1 < 2);
+print val;

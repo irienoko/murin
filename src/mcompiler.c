@@ -167,7 +167,7 @@ static void error_at(Token*token,const char*message)
         fprintf(stderr, " at '%.*s'",token->length,token->start);
     }
     fprintf(stderr, ": %s\n",message);
-    __parser.had_error = false;
+    __parser.had_error = true;
 }
 static void advance()
 {
@@ -270,7 +270,7 @@ static uint8_t parse_variable(const char *message)
 }
 static uint8_t identifier_constant(Token *name)
 {
-    return (mchunk_write_constant_return_index(current_chunk(), OBJ_VAL(copy_string(name->start, name->length, current_vm())),__parser.prev.line));
+    return (mchunk_write_constant_return_index(current_chunk(), OBJ_VAL(copy_string(name->start, name->length, current_vm())),__parser.cur.line));
 }
 
 static void emit_constant(Value value)
