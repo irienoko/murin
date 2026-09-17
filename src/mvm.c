@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -160,6 +161,20 @@ static Result run(Vm*vm)
                     error_at_runtime(vm, "Undefined variable '%s'.",name->chars);
                     return RESULT_RUNTIME_ERROR;
                 }
+                break;
+            }
+
+            case OP_GET_LOCAL:
+            {
+                uint8_t slot = READ_BYTE();
+                vm_stack_push(vm->stack.items[slot], vm);
+                break;
+            }
+
+            case OP_SET_LOCAL:
+            {
+                uint8_t slot = READ_BYTE();
+                vm->stack.items[slot] = peek(0, vm);
                 break;
             }
 

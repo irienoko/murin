@@ -26,29 +26,6 @@ void mchunk_write(Chunk *chunk, uint8_t byte, int line)
     }else{Line __line = {.line=line,.count=1};da_push(&chunk->line, __line);}
 }
 
-uint8_t mchunk_write_constant_return_index(Chunk *chunk, Value value, int line)
-{
-    int index = chunk_add_constant(chunk,value);
-    if(index<256)
-    {
-        mchunk_write(chunk,OP_CONSTANT,line);
-        mchunk_write(chunk,index,line);
-    }
-    if(index>65535)
-    {
-        mchunk_write(chunk,OP_CONSTANT_32,line);
-        mchunk_write(chunk,(uint8_t)(index & 0xff),line);
-        mchunk_write(chunk,(uint8_t)((index >> 8))&0xff,line);
-        mchunk_write(chunk,(uint8_t)((index >> 16))&0xff,line);
-    }else if(index > 256)
-    {
-        mchunk_write(chunk,OP_CONSTANT_16,line);
-        mchunk_write(chunk,(uint8_t)(index & 0xff),line);
-        mchunk_write(chunk,(uint8_t)((index >> 8))&0xff,line);
-    }
-    return (uint8_t)index;
-}
-
 void mchunk_write_constant(Chunk *chunk, Value value, int line)
 {
     int index = chunk_add_constant(chunk,value);

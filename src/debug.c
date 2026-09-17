@@ -8,7 +8,8 @@
 static int const_instruction(const char*name,Chunk*chunk,int offset);
 static int const_16instruction(const char*name,Chunk*chunk,int offset);
 static int const_32instruction(const char*name,Chunk*chunk,int offset);
-static int simple_instruction(const char *message, int offset);
+static int simple_instruction(const char *name, int offset);
+static int byte_instruction(const char *name, Chunk *chunk, int offset);
 
 int disassemble_instructions(Chunk*chunk,int offset)
 {
@@ -44,6 +45,10 @@ int disassemble_instructions(Chunk*chunk,int offset)
             simple_instruction("OP_GET_GLOBAL", offset);
         case OP_SET_GLOBAL:
             return const_instruction("OP_SET_GLOBAL",chunk,offset);
+        case OP_GET_LOCAL:
+            return byte_instruction("OP_GET_LOCAL", chunk, offset);
+        case OP_SET_LOCAL:
+            return byte_instruction("OP_SET_LOCAL", chunk, offset);
         case OP_GREATER:
             simple_instruction("OP_GREATER", offset);
         case OP_LESS:
@@ -95,9 +100,15 @@ static int const_32instruction(const char*name,Chunk*chunk,int offset)
     return offset +4;
 }
 
-static int simple_instruction(const char *message, int offset)
+static int simple_instruction(const char *name, int offset)
 {
-    printf("%s\n", message);
+    printf("%s\n", name);
     return offset+1;
+}
+static int byte_instruction(const char *name, Chunk *chunk, int offset)
+{
+    uint8_t slot  = chunk->code.items[offset+1];
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
 }
 
