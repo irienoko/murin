@@ -67,7 +67,7 @@ static Vm       *current_vm(){return __vm;}
 static void     error(const char*message){error_at(&__parser.prev,message);}
 static void     error_at_current(const char*message){error_at(&__parser.cur, message);}
 
-static void emit_byte(uint8_t byte){mchunk_write(current_chunk(), byte, __parser.prev.line);}
+static void emit_byte(uint8_t byte){mchunk_write(current_chunk(), byte, __parser.cur.line);}
 static void emit_bytes(uint8_t byte1,uint8_t byte2){emit_byte(byte1);emit_byte(byte2);}
 static void emit_return(){emit_byte(OP_RETURN);}
 static void compiler_end(){emit_return(); if(__parser.had_error){mchunk_disassemble(current_chunk(), "==code==");}}
@@ -273,14 +273,19 @@ static uint8_t parse_variable(const char *message)
     consume(TOKEN_IDENTIFIER, message);
     return identifier_constant(&__parser.prev);
 }
+static uint8_t make_constant(Value value)
+{
+    int constant = chunk_add_constant(current_chunk(), value);
+    return(uint8_t)constant;
+}
 static uint8_t identifier_constant(Token *name)
 {
-    return (mchunk_write_constant_return_index(current_chunk(), OBJ_VAL(copy_string(name->start, name->length, current_vm())),__parser.prev.line));
+    return make_constant(OBJ_VAL(copy_string(name->start, name->length, current_vm())));
 }
 
 static void emit_constant(Value value)
 {
-    mchunk_write_constant(current_chunk(), value, __parser.prev.line);
+    mchunk_write_constant(current_chunk(), value, __parser.cur.line);
 }
 
 # pragma mark - PARSER FUNCTION RULES IMPLEMENTATIONS-

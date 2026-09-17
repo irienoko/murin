@@ -4,8 +4,6 @@
 #include "debug.h"
 #include "mchunk.h"
 
-static int chunk_add_constant(Chunk*chunk,Value value);
-
 #pragma mark - APIs -
 
 void mchunk_init(Chunk *chunk)
@@ -116,7 +114,7 @@ void mchunk_free(Chunk *chunk)
 
 #pragma mark - PRIVATEs -
 
-static int chunk_add_constant(Chunk*chunk,Value value)
+int chunk_add_constant(Chunk*chunk,Value value)
 {
     da_push(&chunk->value, value);
     return (chunk->value.count-1);

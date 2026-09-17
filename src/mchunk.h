@@ -86,6 +86,8 @@ void mchunk_disassemble(Chunk*chunk,const char*name);
 /// @param[in] index    -> instruction index
 int mchunk_get_line(Chunk*chunk,int index);
 
+int chunk_add_constant(Chunk*chunk,Value value);
+
 /// Free chunk
 ///
 /// @param[in] chunk    -> pointer to chunk struct
