@@ -54,6 +54,7 @@ static void  vm_stack_push(Value value,Vm*vm)
 static Value vm_stack_pop(Vm*vm)
 {
     vm->stack_top--;
+    vm->stack.count--;
     return *vm->stack_top;
 }
 static Value peek(int dist, Vm*vm)
@@ -119,6 +120,7 @@ static Result run(Vm*vm)
             case OP_PRINT:
             {
                 mvalue_print(vm_stack_pop(vm));
+                printf("\n");
                 break;
             }
 
