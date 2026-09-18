@@ -330,7 +330,7 @@ static void add_local(Token name)
 }
 static void declare_variable()
 {
-    if(__cur_compiler->scopeDeath == 0) return;;
+    if(__cur_compiler->scopeDeath == 0) return;
     Token *name = &__parser.prev;
     for(int i = __cur_compiler->localCount - 1; i >= 0; i--)
     {
@@ -437,7 +437,7 @@ static void name_variable(Token name,bool canAssign)
     if(arg != -1)
     {
         getOP = OP_GET_LOCAL;
-        getOP = OP_SET_LOCAL;
+        setOP = OP_SET_LOCAL;
     }else
     {
         arg = identifier_constant(&name);
