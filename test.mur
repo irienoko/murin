@@ -14,5 +14,5 @@ if(a == b)
 {
     print "this is rad";
     var random = 2;
-}else{print "not rad"; b = b * a;}
-print b;
+}else{print "not rad";}
+print h;

@@ -6,5 +6,4 @@ rewrite everything one more time:
     - change da_array.h to inline functions
     - make hash tabel more generic
     - figure out how to benchmark a hash tabel
-
-strange undefined behivour -> i dont eben know what it is 
+    - line numbers are a little off
