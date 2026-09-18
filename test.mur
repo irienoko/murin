@@ -1,5 +1,4 @@
-while(true)
-{
-    var a = 2;
-    print a;
+// Single-expression body.
+for (var a = 0; a < 3; a = a + 1) {
+  print a;
 }

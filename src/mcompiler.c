@@ -133,6 +133,7 @@ static void print_statement();
 static void expression_statement();
 static void if_statement();
 static void while_statement();
+static void for_statement();
 
 # pragma mark - DECLARATIONs -
 static void var_declaration();
@@ -292,7 +293,11 @@ static void statement()
     if(match(TOKEN_PRINT))
     {
         print_statement();
-    }else if(match(TOKEN_IF))
+    }else if(match(TOKEN_FOR))
+    {
+        for_statement();
+    }
+    else if(match(TOKEN_IF))
     {
         if_statement();
     }else if(match(TOKEN_WHILE))
@@ -568,6 +573,50 @@ static void while_statement()
     emit_loop(loop_start);
     patch_jump(exitJump);
     emit_byte(OP_POP);
+}
+static void for_statement()
+{
+    scope_begin();
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+    if(match(TOKEN_SEMICOLON))
+    {
+
+    }else if (match(TOKEN_VAR)) 
+    {
+        var_declaration();
+    }else{expression_statement();}
+
+    int loopStart = current_chunk()->code.count;
+
+    int exit_jump = -1;
+    if(!match(TOKEN_SEMICOLON))
+    {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' afet loop");
+        exit_jump = emit_jump(OP_JUMP_IF_FALSE);
+        emit_byte(OP_POP);
+    }
+    //consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    if(!match(TOKEN_RIGHT_PAREN))
+    {
+        int bodyJump = emit_jump(OP_JUMP);
+        int incrementStart = current_chunk()->code.count;
+        expression();
+        emit_byte(OP_POP);
+        consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses");
+        emit_loop(loopStart);
+        loopStart = incrementStart;
+        patch_jump(bodyJump);
+    }
+    statement();
+    emit_loop(loopStart);
+    if(exit_jump != -1)
+    {
+        patch_jump(exit_jump);
+        emit_byte(OP_POP);
+    }
+    scope_end();
 }
 
 # pragma  mark - DECLARATION IMPLEMENTATIONs-
