@@ -1,18 +1,5 @@
-var a = 1;
-var b = 3;
-if(a < b)
+while(true)
 {
-    print "true";
-    a = a+4;
+    var a = 2;
     print a;
 }
-else
-{
-    print "ah";
-}
-if(a == b)
-{
-    print "this is rad";
-    var random = 2;
-}else{print "not rad";}
-print h;

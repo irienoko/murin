@@ -193,6 +193,13 @@ static Result run(Vm*vm)
                 break;
             }
 
+            case OP_LOOP:
+            {
+                uint16_t offset = READ_SHORT();
+                vm->ip -= offset;
+                break;
+            }
+
             case OP_ADD:
             {
                 if(IS_STRING(peek(0, vm)) && IS_STRING(peek(1, vm)))

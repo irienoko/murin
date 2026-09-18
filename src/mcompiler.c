@@ -92,6 +92,15 @@ static void emit_byte(uint8_t byte){mchunk_write(current_chunk(), byte, __parser
 static void emit_bytes(uint8_t byte1,uint8_t byte2){emit_byte(byte1);emit_byte(byte2);}
 static void emit_return(){emit_byte(OP_RETURN);}
 static int emit_jump(uint8_t inst){emit_byte(inst); emit_byte(0xff); emit_byte(0xff); return current_chunk()->code.count - 2;;}
+static void emit_loop(int loopStart)
+{
+    emit_byte(OP_LOOP);
+    int offset = current_chunk()->code.count - loopStart + 2;
+    if(offset > UINT16_MAX) error("Loop body too large.");
+
+    emit_byte((offset >> 8) &0xff);
+    emit_byte(offset & 0xff);
+}
 static void compiler_end(){emit_return(); if(__parser.had_error){mchunk_disassemble(current_chunk(), "==code==");}}
 static void mark_initialised()
 {
@@ -116,14 +125,19 @@ static void unary(bool canAssign);
 static void literal(bool canAssign);
 static void string(bool canAssign);
 static void variable(bool canAssign);
+static void _and(bool canAssign);
+static void _or(bool canAssign);
 
 # pragma  mark - STATEMENTs -
 static void print_statement();
 static void expression_statement();
 static void if_statement();
+static void while_statement();
 
 # pragma mark - DECLARATIONs -
 static void var_declaration();
+
+static void patch_jump(int offset);
 
 # pragma mark - MASSIVE PARSR RULES LIST -
 static Rule rules[] = 
@@ -150,7 +164,7 @@ static Rule rules[] =
   [TOKEN_IDENTIFIER]    = {variable,     NULL,   PREC_NONE},
   [TOKEN_STRING]        = {string,     NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,   NULL,   PREC_NONE},
-  [TOKEN_AND]           = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_AND]           = {NULL,     _and,   PREC_AND},
   [TOKEN_CLASS]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ELSE]          = {NULL,     NULL,   PREC_NONE},
   [TOKEN_FALSE]         = {literal,     NULL,   PREC_NONE},
@@ -158,7 +172,7 @@ static Rule rules[] =
   [TOKEN_FUN]           = {NULL,     NULL,   PREC_NONE},
   [TOKEN_IF]            = {NULL,     NULL,   PREC_NONE},
   [TOKEN_NIL]           = {literal,     NULL,   PREC_NONE},
-  [TOKEN_OR]            = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_OR]            = {NULL,     _or,   PREC_OR},
   [TOKEN_PRINT]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]        = {NULL,     NULL,   PREC_NONE},
   [TOKEN_SUPER]         = {NULL,     NULL,   PREC_NONE},
@@ -281,6 +295,9 @@ static void statement()
     }else if(match(TOKEN_IF))
     {
         if_statement();
+    }else if(match(TOKEN_WHILE))
+    {
+        while_statement();
     }
     else if(match(TOKEN_LEFT_BRACE))
     {
@@ -461,6 +478,24 @@ static void variable(bool canAssign)
     name_variable(__parser.prev, canAssign);
 }
 
+static void _and(bool canAssign)
+{
+    int endjump = emit_jump(OP_JUMP_IF_FALSE);
+    emit_byte(OP_POP);
+    parse_precedence(PREC_AND);
+    patch_jump(endjump);
+}
+static void _or(bool canAssign)
+{
+    int elseJump = emit_jump(OP_JUMP_IF_FALSE);
+    int endjump = emit_jump(OP_JUMP);
+
+    patch_jump(elseJump);
+    emit_byte(OP_POP);
+    parse_precedence(PREC_OR);
+    patch_jump(endjump);
+}
+
 static void block()
 {
     while(!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
@@ -518,6 +553,21 @@ static void if_statement()
 
     if(match(TOKEN_ELSE))statement();
     patch_jump(elsejump);
+}
+
+static void while_statement()
+{
+    int loop_start = current_chunk()->code.count;
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int exitJump = emit_jump(OP_JUMP_IF_FALSE);
+    emit_byte(OP_POP);
+    statement();
+    emit_loop(loop_start);
+    patch_jump(exitJump);
+    emit_byte(OP_POP);
 }
 
 # pragma  mark - DECLARATION IMPLEMENTATIONs-

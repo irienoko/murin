@@ -32,7 +32,8 @@ enum opcode
     OP_SET_LOCAL,
     OP_DEFINE_GLOBAL,
     OP_JUMP_IF_FALSE,
-    OP_JUMP
+    OP_JUMP,
+    OP_LOOP
 };
 typedef struct 
 {

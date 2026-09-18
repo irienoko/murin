@@ -62,6 +62,8 @@ int disassemble_instructions(Chunk*chunk,int offset)
             simple_instruction("OP_DIVIDE", offset);
         case OP_JUMP:
             return jump_instruction("OP_JUMP", 1, chunk, offset);
+        case OP_LOOP:
+            return jump_instruction("OP_LOOP", -2, chunk, offset);
         case OP_JUMP_IF_FALSE:
             return jump_instruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
         case OP_MULTIPLY:
