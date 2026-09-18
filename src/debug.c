@@ -10,6 +10,7 @@ static int const_16instruction(const char*name,Chunk*chunk,int offset);
 static int const_32instruction(const char*name,Chunk*chunk,int offset);
 static int simple_instruction(const char *name, int offset);
 static int byte_instruction(const char *name, Chunk *chunk, int offset);
+static int jump_instruction(const char *name,int sign, Chunk *chunk, int offset);
 
 int disassemble_instructions(Chunk*chunk,int offset)
 {
@@ -59,6 +60,10 @@ int disassemble_instructions(Chunk*chunk,int offset)
             simple_instruction("OP_SUBTRACT", offset);
         case OP_DIVIDE:
             simple_instruction("OP_DIVIDE", offset);
+        case OP_JUMP:
+            return jump_instruction("OP_JUMP", 1, chunk, offset);
+        case OP_JUMP_IF_FALSE:
+            return jump_instruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
         case OP_MULTIPLY:
             simple_instruction("OP_MULTIPLY", offset);
         case OP_CONSTANT_16:
@@ -112,3 +117,10 @@ static int byte_instruction(const char *name, Chunk *chunk, int offset)
     return offset + 2;
 }
 
+static int jump_instruction(const char *name,int sign, Chunk *chunk, int offset)
+{
+    uint16_t jump = (uint16_t)(chunk->code.items[offset+1]<<8);
+    jump |= chunk->code.items[offset+2];
+    printf("%-16s %4d -> %d\n", name, offset, offset+3 + sign * jump);
+    return offset+3;
+}

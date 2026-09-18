@@ -91,6 +91,7 @@ static void     error_at_current(const char*message){error_at(&__parser.cur, mes
 static void emit_byte(uint8_t byte){mchunk_write(current_chunk(), byte, __parser.cur.line);}
 static void emit_bytes(uint8_t byte1,uint8_t byte2){emit_byte(byte1);emit_byte(byte2);}
 static void emit_return(){emit_byte(OP_RETURN);}
+static int emit_jump(uint8_t inst){emit_byte(inst); emit_byte(0xff); emit_byte(0xff); return current_chunk()->code.count - 2;;}
 static void compiler_end(){emit_return(); if(__parser.had_error){mchunk_disassemble(current_chunk(), "==code==");}}
 static void mark_initialised()
 {
@@ -119,6 +120,7 @@ static void variable(bool canAssign);
 # pragma  mark - STATEMENTs -
 static void print_statement();
 static void expression_statement();
+static void if_statement();
 
 # pragma mark - DECLARATIONs -
 static void var_declaration();
@@ -276,7 +278,11 @@ static void statement()
     if(match(TOKEN_PRINT))
     {
         print_statement();
-    }else if(match(TOKEN_LEFT_BRACE))
+    }else if(match(TOKEN_IF))
+    {
+        if_statement();
+    }
+    else if(match(TOKEN_LEFT_BRACE))
     {
         scope_begin();
         block();
@@ -488,6 +494,30 @@ static void expression_statement()
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' for end line.");
     emit_byte(OP_POP);
+}
+
+static void patch_jump(int offset)
+{
+    int jump = current_chunk()->code.count - offset - 2;
+    if(jump > UINT16_MAX)error("too much code to jump over");
+    current_chunk()->code.items[offset] = (jump >> 8) & 0xff;
+    current_chunk()->code.items[offset + 1] = jump & 0xff;
+}
+
+static void if_statement()
+{
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+    int jump = emit_jump(OP_JUMP_IF_FALSE);
+    emit_byte(OP_POP);
+    statement();
+    int elsejump = emit_jump(OP_JUMP);
+    patch_jump(jump);
+    emit_byte(OP_POP);
+
+    if(match(TOKEN_ELSE))statement();
+    patch_jump(elsejump);
 }
 
 # pragma  mark - DECLARATION IMPLEMENTATIONs-

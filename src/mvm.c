@@ -80,6 +80,7 @@ static bool value_equal(Value a, Value b)
 static Result run(Vm*vm)
 {
     #define READ_BYTE() (*vm->ip++)
+    #define READ_SHORT() (vm->ip += 2, (uint16_t)((vm->ip[-2]<<8) | vm->ip[-1]))
     #define READ_STRING()  AS_STRING(READ_CONSTANT(READ_BYTE()))
     #define BINARY_OP(valuetype,op)\
         do{\
@@ -178,6 +179,20 @@ static Result run(Vm*vm)
                 break;
             }
 
+            case OP_JUMP_IF_FALSE:
+            {
+                uint16_t offset = READ_SHORT();
+                if(is_falsey(peek(0, vm))) vm->ip += offset;
+                break;
+            }
+
+            case OP_JUMP:
+            {
+                uint16_t offset = READ_SHORT();
+                vm->ip += offset;
+                break;
+            }
+
             case OP_ADD:
             {
                 if(IS_STRING(peek(0, vm)) && IS_STRING(peek(1, vm)))
@@ -243,6 +258,7 @@ static Result run(Vm*vm)
         }
     }
     #undef READ_BYTE
+    #undef READ_SHORT
     #undef BINARY_OP
     #undef READ_STRING
     #undef READ_CONSTANT
