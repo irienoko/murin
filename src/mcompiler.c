@@ -54,8 +54,9 @@ typedef struct
     int depth;
 }Local;
 
-typedef struct
+typedef struct Compiler
 {
+    struct Compiler *enclosing;
     ObjFunction *function;
     FunctionType type;
     Local locals[UINT8_COUNT];
@@ -112,6 +113,7 @@ static void emit_loop(int loopStart)
 static ObjFunction *compiler_end();
 static void mark_initialised()
 {
+    if(__cur_compiler->scopeDeath == 0) return;
     __cur_compiler->locals[__cur_compiler->localCount - 1].depth = __cur_compiler->scopeDeath;
 }
 static void define_variable(uint8_t global)
@@ -142,9 +144,11 @@ static void expression_statement();
 static void if_statement();
 static void while_statement();
 static void for_statement();
+static void function_statement(FunctionType type);
 
 # pragma mark - DECLARATIONs -
 static void var_declaration();
+static void fun_declaration();
 
 static void patch_jump(int offset);
 
@@ -285,7 +289,10 @@ static bool match(Tokentype type)
 }
 static void declaration()
 {
-    if(match(TOKEN_VAR))
+    if(match(TOKEN_FUN))
+    {
+        fun_declaration();
+    }else if(match(TOKEN_VAR))
     {
         var_declaration();
     }else
@@ -412,12 +419,17 @@ static void emit_constant(Value value)
 }
 static void init_compiler(Compiler *compiler,FunctionType type)
 {
+    compiler->enclosing = __cur_compiler;
     compiler->function = NULL;
     compiler->type = type;
     compiler->localCount =0;
     compiler->scopeDeath = 0;
     compiler->function = new_funciton();
     __cur_compiler = compiler;
+    if(type != TYPE_SCRIPT)
+    {
+        __cur_compiler->function->name = copy_string(__parser.prev.start, __parser.prev.length);
+    }
     Local *local = &__cur_compiler->locals[__cur_compiler->localCount++];
     local->depth = 0;
     local->name.start = "";
@@ -643,6 +655,35 @@ static void for_statement()
     scope_end();
 }
 
+static void function_statement(FunctionType type)
+{
+    Compiler compiler;
+    init_compiler(&compiler, type);
+    scope_begin();
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+    if(!check(TOKEN_RIGHT_PAREN))
+    {
+        do
+        {
+            __cur_compiler->function->arity++;
+            if(__cur_compiler->function->arity > 255)
+            {
+                error_at_current("To many parameters");
+            }
+            uint8_t constant = parse_variable("expect paramater name.");
+            define_variable(constant);
+        }while(match(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after paramaters. ");
+    consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+    block();
+
+    ObjFunction *function = compiler_end();
+    emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(function)));
+
+}
+
 # pragma  mark - DECLARATION IMPLEMENTATIONs-
 static void var_declaration()
 {
@@ -655,5 +696,13 @@ static void var_declaration()
         emit_byte(OP_NIL);
     }
     consume(TOKEN_SEMICOLON, "Expect ';' for end line.");
+    define_variable(global);
+}
+
+static void fun_declaration()
+{
+    uint8_t global = parse_variable("Expect function name");
+    mark_initialised();
+    function_statement(TYPE_FUNCTION);
     define_variable(global);
 }
