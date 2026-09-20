@@ -36,6 +36,9 @@ static void print_object(Value value)
             print_function(AS_FUNCTION(value));
             break;
         }
+        case OBJ_NATIVE:
+            printf("<native fn>>");
+        break;
     }
 }
 

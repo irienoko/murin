@@ -1,3 +1,4 @@
+#include <time.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -20,6 +21,8 @@ static Result run(Vm*vm);
 static void error_at_runtime(Vm *vm,const char*format,...);
 static void concatenate(Vm *vm);
 
+static void defineNative(const char*name, NativeFn function,Vm *vm);
+static Value clockNative(int argCount, Value *args);
 static Vm *__cur_vm;
 
 # pragma mark - APIs - 
@@ -33,6 +36,7 @@ void mvm_init(Vm*vm)
     vm->objects = NULL;
     __cur_vm = vm;
     vm->frameCount = 0;
+    defineNative("clock", clockNative, vm);
 }
 void mvm_free(Vm*vm)
 {
@@ -70,6 +74,63 @@ static Value vm_stack_pop(Vm*vm)
 static Value peek(int dist, Vm*vm)
 {
     return vm->stack_top[-1-dist];
+}
+
+static bool call(ObjFunction *function, int argCount,Vm *vm)
+{
+    if(argCount != function->arity)
+    {
+        error_at_runtime(vm, "Expected %d argements but for %d.", function->arity, argCount);
+        return false;
+    }
+    if(vm->frameCount == FRAMES_MAX)
+    {
+        error_at_runtime(vm, "Stack overflow.");
+        return false;
+    }
+    CallFrame *frame = &vm->frames[vm->frameCount++];
+    frame->function = function;
+    frame->ip = function->chunk.code.items;
+    frame->slots = vm->stack_top - argCount - 1;
+    return true;
+}
+
+static void defineNative(const char*name, NativeFn function,Vm *vm)
+{
+    vm_stack_push(OBJ_VAL(copy_string(name, (int)strlen(name))),vm);
+    vm_stack_push((OBJ_VAL(new_native(function))), vm);
+    mtabel_add(&vm->globals, AS_STRING(vm->stack.items[0]), vm->stack.items[1]);
+    vm_stack_pop(vm);
+    vm_stack_pop(vm);
+} 
+
+static Value clockNative(int argCount, Value *args)
+{
+    return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+
+static bool call_value(Value callee, int argCount,Vm *vm)
+{
+    if(IS_OBJ(callee))
+    {
+        switch (OBJ_TYPE(callee)) 
+        {
+            case OBJ_FUNCTION:
+                return  call(AS_FUNCTION(callee),argCount,vm);
+            case OBJ_NATIVE:
+            {
+                NativeFn native = AS_NATIVE(callee);
+                Value result = native(argCount, vm->stack_top - argCount);
+                vm->stack_top -= argCount + 1;
+                vm_stack_push(result, vm);
+                return true;
+            }
+            default:break;
+        }
+    }
+    error_at_runtime(vm, "can only call functions.");
+    return false;
 }
 static bool is_falsey(Value value){return IS_NIL(value) || (IS_BOOL(value)&&!AS_BOOL(value));}
 static bool value_equal(Value a, Value b)
@@ -268,9 +329,27 @@ static Result run(Vm*vm)
                 vm_stack_push(constant,vm);
                 break;
             }*/
+
+            case OP_CALL:
+            {
+                int argCount = READ_BYTE();
+                if(!call_value(peek(argCount, vm), argCount,vm))return RESULT_RUNTIME_ERROR;
+                frame = &vm->frames[vm->frameCount - 1];
+                break;
+            }
             case OP_RETURN:
             {
-                return RESULT_OK;
+                Value result = vm_stack_pop(vm);
+                vm->frameCount--;
+                if(vm->frameCount == 0)
+                {
+                    vm_stack_pop(vm);
+                    return RESULT_OK;
+                }
+                vm->stack_top = frame->slots;
+                vm_stack_push(result, vm);
+                frame = &vm->frames[vm->frameCount -1];
+                break;
             }
         }
     }
@@ -288,11 +367,21 @@ static void error_at_runtime(Vm *vm,const char*format,...)
     va_end(args);
     fputs("\n", stderr);
 
-    CallFrame *frame = &vm->frames[vm->frameCount - 1];
-    size_t inst = frame->ip - frame->function->chunk.code.items - 1;
-    printf("%04d\n",(int)inst);
-    int line = mchunk_get_line(&frame->function->chunk, inst);
-    fprintf(stderr, "[line %d] in script\n",line);
+    for(int i = vm->frameCount - 1; i >= 0; i--)
+    {
+        CallFrame *frame = &vm->frames[i];
+        ObjFunction *function = frame->function;
+        size_t inst = frame->ip - frame->function->chunk.code.items - 1;
+
+        fprintf(stderr, "[Line %d] in ", mchunk_get_line(&frame->function->chunk, inst));
+        if(function->name == NULL)
+        {
+            fprintf(stderr, "sciprt\n");
+        }else 
+        {
+            fprintf(stderr, "%s()\n", function->name->chars);
+        }
+    }
     mvm_free(vm);
 }
 
@@ -302,10 +391,8 @@ Result mvm_interpret_result(const char*source, Vm *vm)
     if(function == NULL) return RESULT_COMPILE_ERROR;
 
     vm_stack_push(OBJ_VAL(function), vm);
-    CallFrame *frame = &vm->frames[vm->frameCount++];
-    frame->function = function;
-    frame->ip = function->chunk.code.items;
-    frame->slots = vm->stack.items;
+
+    call(function, 0, vm);
 
     return run(vm);
 }

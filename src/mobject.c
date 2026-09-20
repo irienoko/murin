@@ -38,6 +38,13 @@ ObjFunction *new_funciton()
     return function;
 }
 
+ObjNative *new_native(NativeFn function)
+{
+    ObjNative *native = ALLOCATE_OBJ(ObjNative, OBJ_NATIVE, get_current_vm());
+    native->function = function;
+    return native;
+}
+
 ObjString *copy_string(const char *chars, int length)
 {
     uint32_t hash = hash_string(chars, length);
@@ -96,6 +103,11 @@ static void free_object(Obj *object)
             ObjFunction *function = (ObjFunction*)object;
             mchunk_free(&function->chunk);
             FREE(ObjFunction, object);
+            break;
+        }
+        case OBJ_NATIVE:
+        {
+            FREE(ObjNative, object);
             break;
         }
     }

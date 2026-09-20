@@ -99,7 +99,7 @@ static void     error_at_current(const char*message){error_at(&__parser.cur, mes
 
 static void emit_byte(uint8_t byte){mchunk_write(current_chunk(), byte, __parser.cur.line);}
 static void emit_bytes(uint8_t byte1,uint8_t byte2){emit_byte(byte1);emit_byte(byte2);}
-static void emit_return(){emit_byte(OP_RETURN);}
+static void emit_return(){emit_byte(OP_NIL); emit_byte(OP_RETURN);}
 static int emit_jump(uint8_t inst){emit_byte(inst); emit_byte(0xff); emit_byte(0xff); return current_chunk()->code.count - 2;;}
 static void emit_loop(int loopStart)
 {
@@ -135,6 +135,7 @@ static void unary(bool canAssign);
 static void literal(bool canAssign);
 static void string(bool canAssign);
 static void variable(bool canAssign);
+static void call(bool canAssign);
 static void _and(bool canAssign);
 static void _or(bool canAssign);
 
@@ -145,6 +146,7 @@ static void if_statement();
 static void while_statement();
 static void for_statement();
 static void function_statement(FunctionType type);
+static void return_statement();
 
 # pragma mark - DECLARATIONs -
 static void var_declaration();
@@ -155,7 +157,7 @@ static void patch_jump(int offset);
 # pragma mark - MASSIVE PARSR RULES LIST -
 static Rule rules[] = 
 {
-  [TOKEN_LEFT_PAREN]    = {grouping, NULL,   PREC_NONE},
+  [TOKEN_LEFT_PAREN]    = {grouping, call,   PREC_CALL},
   [TOKEN_RIGHT_PAREN]   = {NULL,     NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]    = {NULL,     NULL,   PREC_NONE}, 
   [TOKEN_RIGHT_BRACE]   = {NULL,     NULL,   PREC_NONE},
@@ -306,7 +308,11 @@ static void statement()
     if(match(TOKEN_PRINT))
     {
         print_statement();
-    }else if(match(TOKEN_FOR))
+    }else if(match(TOKEN_RETURN))
+    {
+        return_statement();
+    }
+    else if(match(TOKEN_FOR))
     {
         for_statement();
     }
@@ -444,6 +450,7 @@ static ObjFunction *compiler_end()
     {
         mchunk_disassemble(current_chunk(), function->name != NULL ? function->name->chars: "<script>");
     } 
+    __cur_compiler = __cur_compiler->enclosing;
     return function;
 }
 
@@ -517,6 +524,27 @@ static void name_variable(Token name,bool canAssign)
 static void variable(bool canAssign)
 {
     name_variable(__parser.prev, canAssign);
+}
+
+
+static uint8_t argument_list()
+{
+    uint8_t argCount = 0;
+    if(!check(TOKEN_RIGHT_PAREN))
+    {
+        do{
+            expression();
+            if(argCount == 255)error("Too many arguments.");
+            argCount++;
+        }while(match(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_PAREN, "Expect '(' after arguments");
+    return argCount;
+}
+static void call(bool canAssign)
+{
+    uint8_t argCount = argument_list();
+    emit_bytes(OP_CALL, argCount);
 }
 
 static void _and(bool canAssign)
@@ -682,6 +710,19 @@ static void function_statement(FunctionType type)
     ObjFunction *function = compiler_end();
     emit_bytes(OP_CONSTANT, make_constant(OBJ_VAL(function)));
 
+}
+
+static void return_statement()
+{
+    if(__cur_compiler->type == TYPE_SCRIPT)error("Can not reutrn for top level code.");
+    if(match(TOKEN_SEMICOLON))
+    {
+        emit_return();
+    }else{
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+        emit_byte(OP_RETURN);
+    }
 }
 
 # pragma  mark - DECLARATION IMPLEMENTATIONs-
