@@ -17,8 +17,10 @@
 
 # pragma mark - PROTOTYPEs - 
 static Result run(Vm*vm);
-static void error_at_runtime(Vm*vm,const char*format,...);
+static void error_at_runtime(Vm *vm,const char*format,...);
 static void concatenate(Vm *vm);
+
+static Vm *__cur_vm;
 
 # pragma mark - APIs - 
 void mvm_init(Vm*vm)
@@ -29,13 +31,20 @@ void mvm_init(Vm*vm)
     vm->stack.capacity = 256;
     mtabel_init(&vm->strings);
     vm->objects = NULL;
+    __cur_vm = vm;
+    vm->frameCount = 0;
 }
 void mvm_free(Vm*vm)
 {
     mtabel_free(&vm->strings);
     mtabel_free(&vm->globals);
     da_free(&vm->stack);
-    free_objects(vm);
+    free_objects();
+}
+
+Vm *get_current_vm()
+{
+    return __cur_vm;
 }
 
 # pragma mark - Simple Functions - 
@@ -79,8 +88,9 @@ static bool value_equal(Value a, Value b)
 # pragma mark - PROTOTYPE IMPLEMENTATIONS- 
 static Result run(Vm*vm)
 {
-    #define READ_BYTE() (*vm->ip++)
-    #define READ_SHORT() (vm->ip += 2, (uint16_t)((vm->ip[-2]<<8) | vm->ip[-1]))
+    CallFrame *frame = &vm->frames[vm->frameCount -1];
+    #define READ_BYTE() (*frame->ip++)
+    #define READ_SHORT() (frame->ip += 2, (uint16_t)((frame->ip[-2]<<8) | frame->ip[-1]))
     #define READ_STRING()  AS_STRING(READ_CONSTANT(READ_BYTE()))
     #define BINARY_OP(valuetype,op)\
         do{\
@@ -95,7 +105,7 @@ static Result run(Vm*vm)
         }while(false)
     //#define READ_CONSTANT_16() (vm->c->code[READ_BYTE()] | vm->c->code[READ_BYTE()+1] <<8)
     //#define READ_CONSTANT_32() (vm->c->code[READ_BYTE()] | vm->c->code[READ_BYTE()+1] <<8 | vm->c->code[READ_BYTE()+2] <<16)
-    #define READ_CONSTANT(read) (vm->chunk->value.items[read])
+    #define READ_CONSTANT(read) (frame->function->chunk.value.items[read])
     for(;;)
     {
         #ifdef DEBUG_TRACE_EXE
@@ -146,7 +156,7 @@ static Result run(Vm*vm)
                 Value value;
                 if(!mtabel_get(&vm->globals, name, &value))
                 {
-                    error_at_runtime(vm, "variable not defined '%s'.", name->chars);
+                    error_at_runtime(vm,"variable not defined '%s'.", name->chars);
                     return RESULT_RUNTIME_ERROR;
                 }
                 vm_stack_push(value, vm);
@@ -168,35 +178,35 @@ static Result run(Vm*vm)
             case OP_GET_LOCAL:
             {
                 uint8_t slot = READ_BYTE();
-                vm_stack_push(vm->stack.items[slot], vm);
+                vm_stack_push(frame->slots[slot], vm);
                 break;
             }
 
             case OP_SET_LOCAL:
             {
                 uint8_t slot = READ_BYTE();
-                vm->stack.items[slot] = peek(0, vm);
+                frame->slots[slot] = peek(0, vm);
                 break;
             }
 
             case OP_JUMP_IF_FALSE:
             {
                 uint16_t offset = READ_SHORT();
-                if(is_falsey(peek(0, vm))) vm->ip += offset;
+                if(is_falsey(peek(0, vm))) frame->ip += offset;
                 break;
             }
 
             case OP_JUMP:
             {
                 uint16_t offset = READ_SHORT();
-                vm->ip += offset;
+                frame->ip += offset;
                 break;
             }
 
             case OP_LOOP:
             {
                 uint16_t offset = READ_SHORT();
-                vm->ip -= offset;
+                frame->ip -= offset;
                 break;
             }
 
@@ -270,7 +280,7 @@ static Result run(Vm*vm)
     #undef READ_STRING
     #undef READ_CONSTANT
 }
-static void error_at_runtime(Vm*vm,const char*format,...)
+static void error_at_runtime(Vm *vm,const char*format,...)
 {
     va_list args;
     va_start(args, format);
@@ -278,31 +288,26 @@ static void error_at_runtime(Vm*vm,const char*format,...)
     va_end(args);
     fputs("\n", stderr);
 
-    size_t inst = vm->ip - vm->chunk->code.items-1;
+    CallFrame *frame = &vm->frames[vm->frameCount - 1];
+    size_t inst = frame->ip - frame->function->chunk.code.items - 1;
     printf("%04d\n",(int)inst);
-    int line = mchunk_get_line(vm->chunk, inst);
+    int line = mchunk_get_line(&frame->function->chunk, inst);
     fprintf(stderr, "[line %d] in script\n",line);
     mvm_free(vm);
 }
 
-Result mvm_interpret_result(const char*source,Vm*vm)
+Result mvm_interpret_result(const char*source, Vm *vm)
 {
-    Chunk chunk;
-    mchunk_init(&chunk);
-    if(!compile(source,&chunk,vm))
-    {
-        mchunk_free(&chunk);
-        return RESULT_COMPILE_ERROR;
-    }
+    ObjFunction *function = compile(source);
+    if(function == NULL) return RESULT_COMPILE_ERROR;
 
-    
-    vm->chunk = &chunk;
-    vm->ip = vm->chunk->code.items;
+    vm_stack_push(OBJ_VAL(function), vm);
+    CallFrame *frame = &vm->frames[vm->frameCount++];
+    frame->function = function;
+    frame->ip = function->chunk.code.items;
+    frame->slots = vm->stack.items;
 
-    Result result = run(vm);
-    mchunk_free(&chunk);
-
-    return result;
+    return run(vm);
 }
 
 static void concatenate(Vm *vm)
@@ -315,6 +320,6 @@ static void concatenate(Vm *vm)
     memcpy(chars, a->chars, a->length);
     memcpy(chars + a->length, b->chars, b->length);
     chars[length] = '\0';
-    ObjString *result = take_string(chars, length,vm);
+    ObjString *result = take_string(chars, length);
     vm_stack_push(OBJ_VAL(result), vm);
 }

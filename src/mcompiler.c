@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "mcompiler.h"
+#include "da_array.h"
 #include "mchunk.h"
 #include "mobject.h"
 #include "mscanner.h"
@@ -33,6 +34,11 @@ typedef enum
   PREC_CALL,        // . ()
   PREC_PRIMARY
 }Precedence;
+typedef enum
+{
+    TYPE_FUNCTION,
+    TYPE_SCRIPT
+}FunctionType;
 
 typedef void(*ParseFn)(bool canAssign);
 typedef struct
@@ -50,6 +56,8 @@ typedef struct
 
 typedef struct
 {
+    ObjFunction *function;
+    FunctionType type;
     Local locals[UINT8_COUNT];
     int localCount;
     int scopeDeath;
@@ -65,7 +73,7 @@ static void error_at(Token*token,const char*message);
 static void advance();
 static void consume(Tokentype type, const char*message);
 static void emit_constant(Value value);
-static void init_compiler(Compiler *compiler);
+static void init_compiler(Compiler *compiler,FunctionType type);
 static void parse_precedence(Precedence prece);
 static Rule *get_rule(Tokentype type);
 static bool check(Tokentype type);
@@ -83,7 +91,7 @@ static void scope_begin(){__cur_compiler->scopeDeath++;};
 static void scope_end();
 
 # pragma mark - SIMPLE FUNCTIONs -
-static Chunk    *current_chunk(){return __compiling_chunk;}
+static Chunk    *current_chunk(){return &__cur_compiler->function->chunk;}
 static Vm       *current_vm(){return __vm;}
 static void     error(const char*message){error_at(&__parser.prev,message);}
 static void     error_at_current(const char*message){error_at(&__parser.cur, message);}
@@ -101,7 +109,7 @@ static void emit_loop(int loopStart)
     emit_byte((offset >> 8) &0xff);
     emit_byte(offset & 0xff);
 }
-static void compiler_end(){emit_return(); if(__parser.had_error){mchunk_disassemble(current_chunk(), "==code==");}}
+static ObjFunction *compiler_end();
 static void mark_initialised()
 {
     __cur_compiler->locals[__cur_compiler->localCount - 1].depth = __cur_compiler->scopeDeath;
@@ -186,20 +194,18 @@ static Rule rules[] =
 };
 
 # pragma mark - APIs - 
-bool compile(const char*source,Chunk*chunk,Vm*vm)
+ObjFunction *compile(const char*source)
 {
     mscanner_init(source);
     Compiler compiler;
-    init_compiler(&compiler);
-    __compiling_chunk = chunk;
-    __vm = vm;
+    init_compiler(&compiler,TYPE_SCRIPT);
     __parser.had_error = false;
     __parser.panic_mode = false;
     advance();
     while(!match(TOKEN_EOF)) declaration();
-    consume(TOKEN_EOF, "Expect end of expression.");
-    compiler_end();
-    return !__parser.had_error;
+    //consume(TOKEN_EOF, "Expect end of expression.");
+    ObjFunction *function = compiler_end();
+    return __parser.had_error ? NULL : function;
 }
 
 # pragma mark - PROTOTYPEs IMPLEMENTATIONS - 
@@ -375,7 +381,7 @@ static uint8_t make_constant(Value value)
 }
 static uint8_t identifier_constant(Token *name)
 {
-    return make_constant(OBJ_VAL(copy_string(name->start, name->length, current_vm())));
+    return make_constant(OBJ_VAL(copy_string(name->start, name->length)));
 }
 static bool identifier_equal(Token *a, Token *b)
 {
@@ -404,11 +410,29 @@ static void emit_constant(Value value)
 {
     mchunk_write_constant(current_chunk(), value, __parser.cur.line);
 }
-static void init_compiler(Compiler *compiler)
+static void init_compiler(Compiler *compiler,FunctionType type)
 {
+    compiler->function = NULL;
+    compiler->type = type;
     compiler->localCount =0;
     compiler->scopeDeath = 0;
+    compiler->function = new_funciton();
     __cur_compiler = compiler;
+    Local *local = &__cur_compiler->locals[__cur_compiler->localCount++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.length = 0;
+}
+
+static ObjFunction *compiler_end()
+{
+    emit_return(); 
+    ObjFunction*function = __cur_compiler->function; 
+    if(__parser.had_error)
+    {
+        mchunk_disassemble(current_chunk(), function->name != NULL ? function->name->chars: "<script>");
+    } 
+    return function;
 }
 
 # pragma mark - PARSER FUNCTION RULES IMPLEMENTATIONS-
@@ -455,7 +479,7 @@ static void unary(bool canAssign)
 }
 static void string(bool canAssign)
 {
-    emit_constant(OBJ_VAL(copy_string(__parser.prev.start+1, __parser.prev.length-2,current_vm())));
+    emit_constant(OBJ_VAL(copy_string(__parser.prev.start+1, __parser.prev.length-2)));
 }
 static void name_variable(Token name,bool canAssign)
 {
