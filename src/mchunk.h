@@ -8,19 +8,16 @@
 
 enum opcode
 {
+    OP_ADD,OP_MULTIPLY,OP_DIVIDE,OP_SUBTRACT,
     OP_RETURN,
     OP_NEGATE,
     OP_NOT,
     OP_EQUAL,
     OP_GREATER,
     OP_LESS,
-    OP_ADD,
     OP_NIL,
     OP_TRUE,
     OP_FALSE,
-    OP_SUBTRACT,
-    OP_MULTIPLY,
-    OP_DIVIDE,
     OP_CONSTANT,
     OP_CONSTANT_16,
     OP_CONSTANT_32,

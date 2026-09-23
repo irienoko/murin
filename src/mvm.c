@@ -21,7 +21,6 @@ static Result run(Vm*vm);
 static void error_at_runtime(Vm *vm,const char*format,...);
 static void concatenate(Vm *vm);
 
-static void defineNative(const char*name, NativeFn function,Vm *vm);
 static Value clockNative(int argCount, Value *args);
 static Vm *__cur_vm;
 
@@ -36,7 +35,7 @@ void mvm_init(Vm*vm)
     vm->objects = NULL;
     __cur_vm = vm;
     vm->frameCount = 0;
-    defineNative("clock", clockNative, vm);
+    //defineNative("clock", clockNative, vm);
 }
 void mvm_free(Vm*vm)
 {
@@ -49,6 +48,10 @@ void mvm_free(Vm*vm)
 Vm *get_current_vm()
 {
     return __cur_vm;
+}
+Value peek(int dist, Vm*vm)
+{
+    return vm->stack_top[-1-dist];
 }
 
 # pragma mark - Simple Functions - 
@@ -71,10 +74,6 @@ static Value vm_stack_pop(Vm*vm)
     vm->stack.count--;
     return *vm->stack_top;
 }
-static Value peek(int dist, Vm*vm)
-{
-    return vm->stack_top[-1-dist];
-}
 
 static bool call(ObjFunction *function, int argCount,Vm *vm)
 {
@@ -95,7 +94,7 @@ static bool call(ObjFunction *function, int argCount,Vm *vm)
     return true;
 }
 
-static void defineNative(const char*name, NativeFn function,Vm *vm)
+void mvm_defineNative(const char*name, NativeFn function,Vm *vm)
 {
     vm_stack_push(OBJ_VAL(copy_string(name, (int)strlen(name))),vm);
     vm_stack_push((OBJ_VAL(new_native(function))), vm);

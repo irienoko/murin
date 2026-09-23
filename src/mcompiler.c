@@ -100,7 +100,13 @@ static void     error_at_current(const char*message){error_at(&__parser.cur, mes
 static void emit_byte(uint8_t byte){mchunk_write(current_chunk(), byte, __parser.cur.line);}
 static void emit_bytes(uint8_t byte1,uint8_t byte2){emit_byte(byte1);emit_byte(byte2);}
 static void emit_return(){emit_byte(OP_NIL); emit_byte(OP_RETURN);}
-static int emit_jump(uint8_t inst){emit_byte(inst); emit_byte(0xff); emit_byte(0xff); return current_chunk()->code.count - 2;;}
+static int emit_jump(uint8_t inst)
+{
+    emit_byte(inst); 
+    emit_byte(0xff); 
+    emit_byte(0xff); 
+    return current_chunk()->code.count - 2;
+}
 static void emit_loop(int loopStart)
 {
     emit_byte(OP_LOOP);
@@ -147,6 +153,7 @@ static void while_statement();
 static void for_statement();
 static void function_statement(FunctionType type);
 static void return_statement();
+static void plusequal_statement();
 
 # pragma mark - DECLARATIONs -
 static void var_declaration();
@@ -308,7 +315,8 @@ static void statement()
     if(match(TOKEN_PRINT))
     {
         print_statement();
-    }else if(match(TOKEN_RETURN))
+    }
+    else if(match(TOKEN_RETURN))
     {
         return_statement();
     }

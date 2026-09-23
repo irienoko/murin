@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "mvalue.h"
 #include "mvm.h"
+
+#include <math.h>
 
 static void repl(Vm*vm)
 {
@@ -57,11 +60,25 @@ static void run_file(const char *path,Vm*vm)
     if(result==RESULT_RUNTIME_ERROR) exit(70);
 }
 
+static Value random_function(int argCount, Value *args)
+{
+    double a = AS_NUMBER(args[0]);
+    double b = AS_NUMBER(args[1]);
+    return NUMBER_VAL(a+b);
+}
 
+static Value powNative(int argCount, Value *args)
+{
+    double a = AS_NUMBER(args[0]);
+    double b = AS_NUMBER(args[1]);
+    return NUMBER_VAL(pow(a, b));
+}
 int main(int argc, char *argv[])
 {
     Vm vm;
     mvm_init(&vm);
+    mvm_defineNative("pow", powNative, &vm);
+    mvm_defineNative("random", random_function, &vm);
 
     if(argc==1)
     {

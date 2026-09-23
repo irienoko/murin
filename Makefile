@@ -54,7 +54,7 @@ endif
 
 ifeq ($(PLAT),linux)
 	# -lm may be needed for __builtin_sqrtf (in cases where it isn't replaced by a CPU instruction intrinsic)
-	LIBS    = 
+	LIBS    = -lm
 	BUILD_DIR = build/linux
 
 	# Detect MCST LCC, where -O3 is about equivalent to -O1

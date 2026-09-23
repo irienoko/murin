@@ -38,5 +38,9 @@ Vm *get_current_vm();
 
 Result mvm_interpret_result(const char*source,Vm*vm);
 
+void mvm_defineNative(const char*name, NativeFn function,Vm *vm);
+
+Value peek(int dist, Vm*vm);
+
 
 #endif
